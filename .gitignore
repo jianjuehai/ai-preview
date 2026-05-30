@@ -1,0 +1,29 @@
+# Dependencies
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Build output
+dist/
+build/
+
+# Environment (contains API keys)
+.env
+
+# Logs
+*.log
+
+# IDE
+.vs/
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test output
+coverage/
+.pytest_cache/

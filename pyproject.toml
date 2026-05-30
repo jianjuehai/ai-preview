@@ -1,0 +1,19 @@
+[project]
+name = "ai-preview"
+version = "0.1.0"
+description = "AI PR Review Assistant — 基于大模型的代码评审辅助工具"
+requires-python = ">=3.10"
+dependencies = [
+    "pygithub>=2.6,<3",
+    "python-dotenv>=1.0",
+    "click>=8.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.25",
+]
+
+[project.scripts]
+ai-preview = "src.main:cli"
