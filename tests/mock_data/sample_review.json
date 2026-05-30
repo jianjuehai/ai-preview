@@ -1,0 +1,50 @@
+{
+  "summary": "This PR introduces the project configuration module. The changes add a new AppConfig dataclass and a get_config() function that reads environment variables from a .env file. The module supports both GitHub authentication tokens and DeepSeek API keys.\n\nThe code is generally well-structured, using Python's dataclass and pathlib modules appropriately. The config module follows a clean singleton-like pattern with dotenv loaded at module import time.\n\nHowever, there are some security concerns regarding API key handling and a few minor style issues that should be addressed before merging.",
+  "risk_items": [
+    {
+      "file": "src/config.py",
+      "line_range": "L12-L14",
+      "severity": "medium",
+      "category": "security",
+      "description": "The .env file is loaded at module import time but there is no validation that the API key has the expected format. If a developer accidentally copies an invalid key, the system will silently fail later when making API calls rather than failing fast with a clear error message.",
+      "code_snippet": "load_dotenv(dotenv_path=_env_path)"
+    },
+    {
+      "file": "src/main.py",
+      "line_range": "L6-L8",
+      "severity": "low",
+      "category": "style",
+      "description": "The module docstring uses Chinese characters which may cause encoding issues on some terminals. Consider adding an English version or using ASCII-only characters for maximum compatibility.",
+      "code_snippet": "    python -m src.main --owner <owner> --repo <repo> --pr <number>"
+    },
+    {
+      "file": "src/github/client.py",
+      "line_range": "L86-L99",
+      "severity": "low",
+      "category": "maintainability",
+      "description": "The mock fallback pattern is repeated in four functions (get_pr_detail, get_pr_files, list_pr_commits, capture_pr_data). Consider extracting the common pattern into a decorator or helper to reduce duplication and make future changes easier.",
+      "code_snippet": "    g = _get_github()\n    if g is None:\n        print(...) \n        return ...\n\n    try:\n        ...\n    except GithubException as e:\n        ...\n        return ..."
+    }
+  ],
+  "suggestions": [
+    {
+      "file": "src/config.py",
+      "line_range": "L24-L28",
+      "description": "Add API key format validation so invalid keys fail fast with a clear error message rather than causing silent failures during API calls.",
+      "code_before": "def get_config() -> AppConfig:\n    github_token = os.getenv(\"GITHUB_ACCESS_TOKEN\", \"\").strip() or None\n    deepseek_api_key = os.getenv(\"DEEPSEEK_API_KEY\", \"\").strip() or None\n    return AppConfig(github_token=github_token, deepseek_api_key=deepseek_api_key)",
+      "code_after": "def get_config() -> AppConfig:\n    github_token = os.getenv(\"GITHUB_ACCESS_TOKEN\", \"\").strip() or None\n    deepseek_api_key = os.getenv(\"DEEPSEEK_API_KEY\", \"\").strip() or None\n    # Validate key formats for early failure\n    if deepseek_api_key and not deepseek_api_key.startswith(\"sk-\"):\n        print(\"[config] WARNING: DeepSeek API key does not start with 'sk-', may be invalid\")\n    if github_token and not github_token.startswith(\"github_pat_\"):\n        print(\"[config] WARNING: GitHub token format unexpected, may be invalid\")\n    return AppConfig(github_token=github_token, deepseek_api_key=deepseek_api_key)"
+    },
+    {
+      "file": "src/github/client.py",
+      "line_range": "L86-L131",
+      "description": "Extract the repeated mock fallback pattern into a decorator to reduce code duplication across the four API functions.",
+      "code_before": "def get_pr_detail(owner, repo, pr_number):\n    g = _get_github()\n    if g is None:\n        print(...)\n        return ...\n    try:\n        ...\n    except GithubException as e:\n        ...\n        return ...",
+      "code_after": "def _with_mock_fallback(mock_key: str):\n    \"\"\"Decorator that falls back to mock data on API failure.\"\"\"\n    def decorator(func):\n        @functools.wraps(func)\n        def wrapper(*args, **kwargs):\n            g = _get_github()\n            if g is None:\n                print(f\"[github/client] No token -- using mock data\")\n                return _load_mock()[mock_key]\n            try:\n                return func(g, *args, **kwargs)\n            except GithubException as e:\n                print(f\"[github/client] API error (HTTP {e.status}) -- falling back to mock data\")\n                return _load_mock()[mock_key]\n        return wrapper\n    return decorator"
+    }
+  ],
+  "meta": {
+    "model": "deepseek-chat",
+    "tokens_used": 850,
+    "mock": true
+  }
+}
