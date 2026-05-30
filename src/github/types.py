@@ -60,3 +60,55 @@ class PrCaptureResult:
             "additions": self.additions,
             "deletions": self.deletions,
         }
+
+
+# ============================================================
+# Diff 结构化解析相关类型
+# ============================================================
+
+@dataclass
+class DiffLine:
+    """Diff 中的一行。"""
+    type: Literal["context", "addition", "deletion"]
+    content: str
+    old_line: Optional[int] = None   # 旧文件行号（deletion/context）
+    new_line: Optional[int] = None   # 新文件行号（addition/context）
+
+
+@dataclass
+class DiffHunk:
+    """Diff 中的一个 Hunk（变更块）。"""
+    header: str             # @@ -1,5 +1,7 @@
+    old_start: int
+    old_lines: int
+    new_start: int
+    new_lines: int
+    lines: list[DiffLine] = field(default_factory=list)
+
+
+@dataclass
+class StructuredDiffFile:
+    """单个文件的结构化 Diff。"""
+    filename: str
+    status: Literal["added", "modified", "removed", "renamed"]
+    additions: int
+    deletions: int
+    previous_filename: Optional[str] = None
+    hunks: list[DiffHunk] = field(default_factory=list)
+
+
+@dataclass
+class StructuredDiff:
+    """完整 PR 的结构化 Diff 输出（供下游 AI Review 消费）。"""
+    files: list[StructuredDiffFile] = field(default_factory=list)
+    files_changed: int = 0
+    additions: int = 0
+    deletions: int = 0
+
+    @property
+    def stats(self) -> dict:
+        return {
+            "files_changed": self.files_changed,
+            "additions": self.additions,
+            "deletions": self.deletions,
+        }

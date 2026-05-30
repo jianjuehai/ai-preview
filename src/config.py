@@ -40,7 +40,7 @@ def _mask(value: Optional[str]) -> str:
 def print_config() -> None:
     """打印当前配置状态（Token 脱敏）。"""
     config = get_config()
-    print("=== AI PR Review Assistant — Config Status ===")
+    print("=== AI PR Review Assistant -- Config Status ===")
     print(f"GitHub Token:      {_mask(config.github_token)} (valid: {config.github_token is not None})")
     print(f"DeepSeek API Key:  {_mask(config.deepseek_api_key)} (valid: {config.deepseek_api_key is not None})")
     print("==============================================")
