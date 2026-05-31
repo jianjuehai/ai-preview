@@ -7,26 +7,26 @@
       :class="{ active: activeFile === file.filename }"
       @click="$emit('select', file.filename)"
     >
-      <!-- Status badge -->
       <span class="status-badge" :class="`status-${file.status}`">
         {{ statusLabel(file.status) }}
       </span>
 
-      <!-- Filename -->
       <div class="file-info">
         <span class="file-name">{{ file.filename }}</span>
         <span class="file-meta">
           +{{ file.additions }} / -{{ file.deletions }}
+          <span v-if="getFileRisks(file.filename).length" class="risk-count">
+            {{ getFileRisks(file.filename).length }} issue{{ getFileRisks(file.filename).length > 1 ? 's' : '' }}
+          </span>
         </span>
       </div>
 
-      <!-- Risk indicators -->
       <div v-if="getFileRisks(file.filename).length" class="risk-dots">
         <span
-          v-for="risk in getFileRisks(file.filename)"
-          :key="risk.description"
+          v-for="(risk, i) in getFileRisks(file.filename)"
+          :key="i"
           class="risk-dot"
-          :class="`severity-${risk.severity}`"
+          :class="`sev-${risk.severity}`"
           :title="risk.description"
         ></span>
       </div>
@@ -39,6 +39,9 @@
 </template>
 
 <script>
+import { getFileRisks } from '../utils/annotations.js'
+import { SEVERITY_CLASS } from '../utils/diffColors.js'
+
 export default {
   name: 'FileList',
   props: {
@@ -48,13 +51,11 @@ export default {
   },
   emits: ['select'],
   methods: {
-    statusLabel(status) {
-      const map = { added: 'ADD', modified: 'MOD', removed: 'DEL', renamed: 'RNM' }
-      return map[status] || status.toUpperCase()
+    statusLabel(s) {
+      return { added: 'ADD', modified: 'MOD', removed: 'DEL', renamed: 'RNM' }[s] || s?.toUpperCase()
     },
     getFileRisks(filename) {
-      if (!this.reviewData?.risk_items) return []
-      return this.reviewData.risk_items.filter(r => r.file === filename)
+      return getFileRisks(this.reviewData, filename)
     }
   }
 }
@@ -67,32 +68,33 @@ export default {
   transition: background 0.15s;
 }
 .file-item:hover { background: #21262d; }
-.file-item.active { background: #1f6feb22; border-left: 3px solid var(--accent); padding-left: 13px; }
+.file-item.active { background: #1f6feb22; border-left: 3px solid #58a6ff; padding-left: 13px; }
 
 .status-badge {
-  font-size: 0.65rem; font-weight: 600; padding: 2px 6px; border-radius: 4px;
-  text-transform: uppercase; flex-shrink: 0; min-width: 36px; text-align: center;
+  font-size: 0.62rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+  flex-shrink: 0; min-width: 34px; text-align: center;
 }
-.status-added { background: #3fb95022; color: var(--green); }
-.status-modified { background: #d2992222; color: var(--yellow); }
-.status-removed { background: #f8514922; color: var(--red); }
-.status-renamed { background: #58a6ff22; color: var(--blue); }
+.status-added { background: #3fb95022; color: #3fb950; }
+.status-modified { background: #d2992222; color: #d29922; }
+.status-removed { background: #f8514922; color: #f85149; }
+.status-renamed { background: #58a6ff22; color: #58a6ff; }
 
 .file-info { flex: 1; min-width: 0; }
 .file-name {
-  display: block; font-size: 0.85rem; color: var(--text-primary);
+  display: block; font-size: 0.82rem; color: #c9d1d9;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.file-meta { font-size: 0.72rem; color: var(--text-secondary); }
+.file-meta { font-size: 0.7rem; color: #8b949e; }
+.risk-count { color: #d29922; margin-left: 6px; }
 
-.risk-dots { display: flex; gap: 4px; flex-shrink: 0; }
+.risk-dots { display: flex; gap: 3px; flex-shrink: 0; }
 .risk-dot {
-  width: 8px; height: 8px; border-radius: 50%;
+  width: 7px; height: 7px; border-radius: 50%;
 }
-.severity-critical { background: var(--red); }
-.severity-high { background: var(--orange); }
-.severity-medium { background: var(--yellow); }
-.severity-low { background: var(--blue); }
+.sev-critical { background: #f85149; }
+.sev-high { background: #f0883e; }
+.sev-medium { background: #d29922; }
+.sev-low { background: #58a6ff; }
 
-.empty-state { padding: 40px 16px; text-align: center; color: var(--text-secondary); font-size: 0.85rem; }
+.empty-state { padding: 40px 16px; text-align: center; color: #8b949e; font-size: 0.85rem; }
 </style>
