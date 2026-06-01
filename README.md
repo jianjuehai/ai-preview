@@ -4,6 +4,11 @@
 
 基于大模型与 Agent 架构的代码评审辅助工具，自动化分析 GitHub PR 变更，提供 **变更摘要**、**风险代码识别** 与 **智能修复建议**，配合可视化 Dashboard 直观呈现审查结果。
 
+## 演示视频
+<video width="320" height="240" controls>
+    <source src="[movie.mp4](https://github.com/user-attachments/assets/fa44d3b4-76db-4008-8109-2ec49144aece)" type="video/mp4">
+</video>
+
 ## 🛠 技术栈
 
 | 层级 | 技术 |
@@ -59,7 +64,7 @@ python -m uvicorn src.api.server:app --port 8000
 cd frontend && npm run dev
 ```
 
-打开 **http://localhost:5173**，左侧文件列表 + 右侧语法高亮 Diff + AI 风险气泡标注。
+打开 **http://localhost:5173**，左侧文件列表 + 右侧语法高亮 Diff + AI 风险内联标注 + 修复建议面板。
 
 #### CLI 模式
 
@@ -98,9 +103,8 @@ ai-preview/
 │   ├── src/components/
 │   │   ├── FileList.vue           # 左面板：文件列表 + 风险指示
 │   │   ├── DiffViewer.vue         # 右面板：Diff 代码渲染
-│   │   ├── DiffLine.vue           # 单行 Diff + Prism 语法高亮
-│   │   ├── RiskBadge.vue          # 行内气泡标注
-│   │   └── SuggestionPanel.vue    # Before/After 修复建议
+│   │   ├── DiffLine.vue           # 单行 Diff + Prism 高亮 + 内联风险色条
+│   │   └── SuggestionPanel.vue    # 修复建议（折叠/展开 + 拖拽调整大小）
 │   └── src/utils/
 │       ├── annotations.js         # line_range 解析与匹配
 │       └── diffColors.js          # 配色映射
