@@ -18,7 +18,7 @@
       <div class="split-area" ref="splitArea">
 
         <!-- Upper: code diff -->
-        <div class="split-top" :style="suggCollapsed ? { flex: 1 } : { height: splitPercent + '%' }">
+        <div class="split-top" :style="suggestions.length ? (suggCollapsed ? { flex: 1 } : { height: splitPercent + '%' }) : { flex: 1 }">
           <div class="hunks">
             <div v-for="(hunk, hi) in file.hunks" :key="hi" class="hunk">
               <div class="hunk-header">{{ hunk.header }}</div>
