@@ -1,45 +1,45 @@
 {
-  "summary": "This PR introduces the project configuration module. The changes add a new AppConfig dataclass and a get_config() function that reads environment variables from a .env file. The module supports both GitHub authentication tokens and DeepSeek API keys.\n\nThe code is generally well-structured, using Python's dataclass and pathlib modules appropriately. The config module follows a clean singleton-like pattern with dotenv loaded at module import time.\n\nHowever, there are some security concerns regarding API key handling and a few minor style issues that should be addressed before merging.",
+  "summary": "本次 PR 引入了项目配置模块，新增了 AppConfig 数据类与 get_config() 函数，用于从 .env 文件统一读取环境变量。该模块支持 GitHub 访问令牌和 DeepSeek API 密钥的管理。\n\n代码整体结构清晰，合理使用了 Python 的 dataclass 和 pathlib 模块。配置模块在导入时通过 dotenv 加载环境变量，采用单例模式对外暴露统一入口，设计思路合理。\n\n但存在一些安全方面的隐患需要关注，主要是 API 密钥的格式校验缺失，以及少数代码风格问题建议在合并前修复。",
   "risk_items": [
     {
       "file": "src/config.py",
       "line_range": "L12-L14",
       "severity": "medium",
       "category": "security",
-      "description": "The .env file is loaded at module import time but there is no validation that the API key has the expected format. If a developer accidentally copies an invalid key, the system will silently fail later when making API calls rather than failing fast with a clear error message.",
+      "description": ".env 文件在模块导入时加载，但没有对 API 密钥的格式做任何校验。如果开发者误复制了一个格式错误的密钥，系统不会立即报错，而是会在后续 API 调用时静默失败，增加排查难度。建议增加密钥格式的快速失败（fail-fast）校验。",
       "code_snippet": "load_dotenv(dotenv_path=_env_path)"
-    },
-    {
-      "file": "src/main.py",
-      "line_range": "L6-L8",
-      "severity": "low",
-      "category": "style",
-      "description": "The module docstring uses Chinese characters which may cause encoding issues on some terminals. Consider adding an English version or using ASCII-only characters for maximum compatibility.",
-      "code_snippet": "    python -m src.main --owner <owner> --repo <repo> --pr <number>"
     },
     {
       "file": "src/github/client.py",
       "line_range": "L86-L99",
-      "severity": "low",
+      "severity": "medium",
       "category": "maintainability",
-      "description": "The mock fallback pattern is repeated in four functions (get_pr_detail, get_pr_files, list_pr_commits, capture_pr_data). Consider extracting the common pattern into a decorator or helper to reduce duplication and make future changes easier.",
+      "description": "Mock 降级模式在 get_pr_detail、get_pr_files、list_pr_commits 和 capture_pr_data 四个函数中重复出现。相同的 try/except + fallback 逻辑写在了每个函数里，一旦需要修改降级策略就需要改动四处，容易遗漏。建议抽取为一个装饰器，减少重复代码并提高可维护性。",
       "code_snippet": "    g = _get_github()\n    if g is None:\n        print(...) \n        return ...\n\n    try:\n        ...\n    except GithubException as e:\n        ...\n        return ..."
+    },
+    {
+      "file": "src/ai/client.py",
+      "line_range": "L50-L65",
+      "severity": "low",
+      "category": "logic",
+      "description": "chat_completion 函数在解析 AI 返回的 JSON 失败时，会尝试从 markdown 代码块中提取内容。这个逻辑假设 AI 总会用 ```json ... ``` 包裹响应，如果 AI 使用了其他格式（如纯文本说明 + 代码块），提取可能不完整。建议增加更健壮的 JSON 提取策略，或设置 response_format 参数强制 JSON 输出。",
+      "code_snippet": "            if \"```json\" in content:\n                block = content.split(\"```json\")[1].split(\"```\")[0]\n                return json.loads(block)\n            if \"```\" in content:\n                block = content.split(\"```\")[1].split(\"```\")[0]"
     }
   ],
   "suggestions": [
     {
       "file": "src/config.py",
       "line_range": "L24-L28",
-      "description": "Add API key format validation so invalid keys fail fast with a clear error message rather than causing silent failures during API calls.",
+      "description": "增加 API 密钥格式校验，使无效密钥在系统启动时就快速失败，避免后续 API 调用时静默失败。",
       "code_before": "def get_config() -> AppConfig:\n    github_token = os.getenv(\"GITHUB_ACCESS_TOKEN\", \"\").strip() or None\n    deepseek_api_key = os.getenv(\"DEEPSEEK_API_KEY\", \"\").strip() or None\n    return AppConfig(github_token=github_token, deepseek_api_key=deepseek_api_key)",
-      "code_after": "def get_config() -> AppConfig:\n    github_token = os.getenv(\"GITHUB_ACCESS_TOKEN\", \"\").strip() or None\n    deepseek_api_key = os.getenv(\"DEEPSEEK_API_KEY\", \"\").strip() or None\n    # Validate key formats for early failure\n    if deepseek_api_key and not deepseek_api_key.startswith(\"sk-\"):\n        print(\"[config] WARNING: DeepSeek API key does not start with 'sk-', may be invalid\")\n    if github_token and not github_token.startswith(\"github_pat_\"):\n        print(\"[config] WARNING: GitHub token format unexpected, may be invalid\")\n    return AppConfig(github_token=github_token, deepseek_api_key=deepseek_api_key)"
+      "code_after": "def get_config() -> AppConfig:\n    github_token = os.getenv(\"GITHUB_ACCESS_TOKEN\", \"\").strip() or None\n    deepseek_api_key = os.getenv(\"DEEPSEEK_API_KEY\", \"\").strip() or None\n    if deepseek_api_key and not deepseek_api_key.startswith(\"sk-\"):\n        print(\"[config] WARNING: DeepSeek API key 格式异常，请检查\")\n    if github_token and not (github_token.startswith(\"github_pat_\") or github_token.startswith(\"ghp_\")):\n        print(\"[config] WARNING: GitHub Token 格式异常，请检查\")\n    return AppConfig(github_token=github_token, deepseek_api_key=deepseek_api_key)"
     },
     {
       "file": "src/github/client.py",
       "line_range": "L86-L131",
-      "description": "Extract the repeated mock fallback pattern into a decorator to reduce code duplication across the four API functions.",
+      "description": "将重复的 Mock 降级逻辑抽取为一个装饰器，四个 API 函数共享同一份降级代码，减少重复、便于统一修改。",
       "code_before": "def get_pr_detail(owner, repo, pr_number):\n    g = _get_github()\n    if g is None:\n        print(...)\n        return ...\n    try:\n        ...\n    except GithubException as e:\n        ...\n        return ...",
-      "code_after": "def _with_mock_fallback(mock_key: str):\n    \"\"\"Decorator that falls back to mock data on API failure.\"\"\"\n    def decorator(func):\n        @functools.wraps(func)\n        def wrapper(*args, **kwargs):\n            g = _get_github()\n            if g is None:\n                print(f\"[github/client] No token -- using mock data\")\n                return _load_mock()[mock_key]\n            try:\n                return func(g, *args, **kwargs)\n            except GithubException as e:\n                print(f\"[github/client] API error (HTTP {e.status}) -- falling back to mock data\")\n                return _load_mock()[mock_key]\n        return wrapper\n    return decorator"
+      "code_after": "def _with_mock_fallback(mock_key: str):\n    \"\"\"装饰器：API 调用失败时自动降级到 Mock 数据。\"\"\"\n    def decorator(func):\n        @functools.wraps(func)\n        def wrapper(*args, **kwargs):\n            g = _get_github()\n            if g is None:\n                print(f\"[github/client] 未配置 Token，使用 Mock 数据\")\n                return _load_mock()[mock_key]\n            try:\n                return func(g, *args, **kwargs)\n            except GithubException as e:\n                print(f\"[github/client] API 错误 (HTTP {e.status})，降级到 Mock 数据\")\n                return _load_mock()[mock_key]\n        return wrapper\n    return decorator"
     }
   ],
   "meta": {
