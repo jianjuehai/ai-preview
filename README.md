@@ -1,42 +1,136 @@
 # AI PR Review Assistant
 
-## 📖 项目简介 (Project Overview)
-本项目是一个基于大模型与 Agent 架构的代码评审辅助工具，旨在通过自动化分析 GitHub PR 变更，解决代码审查中缺乏上下文、耗时且容易漏掉深层风险的痛点。系统支持 PR 变更总结、风险代码识别与智能修复建议。
+## 📖 项目简介
 
-## 🛠 技术栈选型 (Tech Stack)
-*   **前端交互:** Vue.js (用于构建直观的评审结果 Dashboard 或看板)
-*   **核心逻辑 / Agent:**  Python
-*   **AI 与工具链:** DeepSeek V4 API, Model Context Protocol (MCP) (用于扩展 Agent 能力，如读取文件、调用外部验证 API)
-*   **其他关键技术:** [例如: AST 语法树分析、用于深度上下文的向量检索等]
+基于大模型与 Agent 架构的代码评审辅助工具，自动化分析 GitHub PR 变更，提供 **变更摘要**、**风险代码识别** 与 **智能修复建议**，配合可视化 Dashboard 直观呈现审查结果。
 
-## 🚀 快速启动 (Quick Start)
-> **评委/审查者请注意**：主分支始终保持可运行状态。部分尚未完全接入后端 AI 接口的功能，目前采用 Mock 数据配合 Feature Flag 运行，不影响核心流程的演示。
+## 🛠 技术栈
 
-### 环境准备
-确保本地已安装 Python 3.10+ 及 pip。
+| 层级 | 技术 |
+|---|---|
+| 前端 Dashboard | Vue 3 + Vite + Vue Router + Prism.js |
+| Web 服务 | FastAPI + Uvicorn |
+| 核心逻辑 | Python 3.10+ |
+| GitHub 集成 | PyGithub（自动 Mock 降级） |
+| AI 审查 | DeepSeek V4（OpenAI 兼容 SDK，自动 Mock 降级） |
+| CLI 工具 | Click |
 
-### 1. 克隆 & 安装依赖
+## 🚀 快速启动
+
+> **主分支始终保持可运行状态。** 未配置 API Key 时系统自动使用内置 Mock 数据运行。
+
+### 1. 环境准备
+- Python 3.10+ & pip
+- Node.js 18+ & npm（仅 Dashboard 前端需要）
+
+### 2. 安装依赖
+
 ```bash
-git clone https://github.com/jianjuehai/AI-PR-Review.git
-cd AI-PR-Review
+git clone https://github.com/jianjuehai/ai-preview.git
+cd ai-preview
+
+# Python 后端
 pip install -r requirements.txt
+
+# Vue.js 前端（可选）
+cd frontend && npm install && cd ..
 ```
 
-### 2. 配置环境变量
-项目根目录已提供 `.env` 文件（已加入 `.gitignore`），请确保包含以下配置：
+### 3. 配置环境变量
+
+编辑项目根目录的 `.env` 文件：
+
 ```env
 GITHUB_ACCESS_TOKEN=<your_github_pat>
 DEEPSEEK_API_KEY=<your_deepseek_api_key>
 ```
 
-### 3. 验证配置
+> Token 可选 —— 未配置时所有接口自动降级到 Mock 数据。
+
+### 4. 启动
+
+#### Web Dashboard（推荐）
+
 ```bash
-# 运行配置模块检查 Token 状态（自动脱敏）
-python -m src.config
+# 终端 1：启动后端
+python -m uvicorn src.api.server:app --port 8000
+
+# 终端 2：启动前端
+cd frontend && npm run dev
 ```
 
-### 4. 运行（CLI 模式）
+打开 **http://localhost:5173**，左侧文件列表 + 右侧语法高亮 Diff + AI 风险气泡标注。
+
+#### CLI 模式
+
 ```bash
-python -m src.main --owner <owner> --repo <repo> --pr <pr_number>
+# Diff 捕获（Markdown 摘要）
+python -m src.main --owner jianjuehai --repo ai-preview --pr 1 --format summary
+
+# AI 代码审查（Markdown 报告）
+python -m src.main --owner jianjuehai --repo ai-preview --pr 1 --review
+
+# AI 代码审查（JSON）
+python -m src.main --owner jianjuehai --repo ai-preview --pr 1 --review --format json
 ```
-> 尚未配置真实 Token 时，系统自动使用 Mock 数据运行。
+
+## 📂 项目结构
+
+```
+ai-preview/
+├── src/
+│   ├── config.py              # 环境变量配置 + Token 脱敏打印
+│   ├── main.py                # CLI 入口（Click）
+│   ├── github/                # PR 数据捕获模块
+│   │   ├── types.py           # PrInfo, PrFile, DiffHunk, StructuredDiff ...
+│   │   ├── client.py          # PyGithub 客户端 + Mock 降级
+│   │   ├── diff_parser.py     # unified diff → 结构化数据
+│   │   └── pr_capture.py      # capture_pr_diff() 编排器
+│   ├── ai/                    # AI 智能分析模块
+│   │   ├── types.py           # ReviewResult, RiskItem, Suggestion
+│   │   ├── client.py          # DeepSeek API 客户端 + Mock 降级
+│   │   ├── prompts.py         # System/User Prompt 模板
+│   │   └── reviewer.py        # review_pr_diff() 编排器
+│   └── api/                   # Web 服务
+│       └── server.py          # FastAPI app + API 端点
+├── frontend/                  # Vue.js Dashboard
+│   ├── src/views/Dashboard.vue    # 双面板主布局
+│   ├── src/components/
+│   │   ├── FileList.vue           # 左面板：文件列表 + 风险指示
+│   │   ├── DiffViewer.vue         # 右面板：Diff 代码渲染
+│   │   ├── DiffLine.vue           # 单行 Diff + Prism 语法高亮
+│   │   ├── RiskBadge.vue          # 行内气泡标注
+│   │   └── SuggestionPanel.vue    # Before/After 修复建议
+│   └── src/utils/
+│       ├── annotations.js         # line_range 解析与匹配
+│       └── diffColors.js          # 配色映射
+├── tests/                    # pytest 测试套件（63+ tests）
+├── pyproject.toml
+└── requirements.txt
+```
+
+## 🔌 API 端点
+
+| 端点 | 方法 | 说明 |
+|---|---|---|
+| `/` | GET | Dashboard SPA（构建后）或占位页 |
+| `/api/diff?owner=&repo=&pr=` | GET | PR 结构化 Diff 数据 |
+| `/api/review?owner=&repo=&pr=` | GET | AI 审查结果 |
+| `/docs` | GET | OpenAPI 交互文档 |
+
+## 🧪 测试
+
+```bash
+# 全量 Python 测试
+pytest tests/ -v
+
+# 前端构建验证
+cd frontend && npm run build
+```
+
+## 📐 设计原则
+
+1. **增量开发** — 每个 PR 极小粒度，不跨层
+2. **主干安全** — 未配置 Token 时自动 Mock 降级，main 始终可运行
+3. **类型安全** — Python dataclass + JS 类型注解
+4. **防御性编程** — AI JSON 输出缺失字段有默认值，不崩溃
