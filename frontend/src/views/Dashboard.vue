@@ -86,7 +86,7 @@ export default {
   name: 'Dashboard',
   components: { FileList },
   setup() {
-    const { diffData, reviewData, files, stats, prInfo, loading, error, fetchAll } = usePrData()
+    const { diffData, reviewData, files, stats, prInfo, diffLoading, reviewLoading, loading, error, fetchAll } = usePrData()
     const activeFile = ref(null)
     const router = useRouter()
 
