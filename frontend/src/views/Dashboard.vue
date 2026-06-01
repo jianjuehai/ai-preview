@@ -4,6 +4,15 @@
     <header class="header">
       <div class="header-left">
         <h1>AI PR Review</h1>
+        <!-- Repo input bar -->
+        <form class="repo-form" @submit.prevent="doFetch">
+          <input v-model="owner" class="repo-input" placeholder="owner" spellcheck="false" />
+          <span class="repo-slash">/</span>
+          <input v-model="repo" class="repo-input" placeholder="repo" spellcheck="false" />
+          <span class="repo-hash">#</span>
+          <input v-model.number="pr" class="repo-input pr-input" type="number" placeholder="1" min="1" />
+          <button type="submit" class="go-btn" :disabled="loading">Go</button>
+        </form>
         <span v-if="prInfo" class="pr-badge">
           {{ prInfo.base_ref }}#{{ prInfo.number }} — {{ prInfo.title }}
         </span>
@@ -32,7 +41,7 @@
             Make sure the backend is running:<br/>
             <code>python -m uvicorn src.api.server:app --port 8000</code>
           </p>
-          <button class="retry-btn" @click="fetchAll('jianjuehai', 'ai-preview', 1)">
+          <button class="retry-btn" @click="doFetch">
             Retry
           </button>
         </div>
@@ -81,6 +90,17 @@ export default {
     const activeFile = ref(null)
     const router = useRouter()
 
+    const owner = ref('jianjuehai')
+    const repo = ref('ai-preview')
+    const pr = ref(1)
+
+    function doFetch() {
+      if (!owner.value || !repo.value || !pr.value) return
+      activeFile.value = null
+      router.push({ name: 'dashboard' })
+      fetchAll(owner.value, repo.value, pr.value)
+    }
+
     const riskLevel = computed(() => {
       if (!reviewData.value) return 'none'
       const order = { critical: 4, high: 3, medium: 2, low: 1 }
@@ -97,10 +117,10 @@ export default {
     }
 
     onMounted(() => {
-      fetchAll('jianjuehai', 'ai-preview', 1)
+      doFetch()
     })
 
-    return { diffData, reviewData, files, stats, prInfo, loading, error, activeFile, riskLevel, onSelectFile, fetchAll }
+    return { diffData, reviewData, files, stats, prInfo, loading, error, activeFile, riskLevel, onSelectFile, owner, repo, pr, doFetch }
   }
 }
 </script>
@@ -134,8 +154,28 @@ body { background: var(--bg-primary); color: var(--text-primary); }
   flex-shrink: 0;
 }
 .header-left { display: flex; align-items: center; gap: 16px; }
-.header-left h1 { font-size: 1.1rem; color: var(--accent); font-weight: 600; }
-.pr-badge { font-size: 0.85rem; color: var(--text-secondary); }
+.header-left h1 { font-size: 1.1rem; color: var(--accent); font-weight: 600; white-space: nowrap; }
+
+/* Repo input form */
+.repo-form { display: flex; align-items: center; gap: 2px; }
+.repo-input {
+  width: 100px; padding: 4px 8px; background: var(--bg-primary); border: 1px solid var(--border);
+  border-radius: 5px; color: var(--text-primary); font-size: 0.8rem; outline: none;
+  font-family: inherit;
+}
+.repo-input:focus { border-color: var(--accent); }
+.repo-input.pr-input { width: 52px; -moz-appearance: textfield; }
+.repo-input.pr-input::-webkit-outer-spin-button,
+.repo-input.pr-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.repo-slash, .repo-hash { color: var(--text-secondary); font-size: 0.8rem; flex-shrink: 0; }
+.go-btn {
+  padding: 4px 12px; background: #238636; color: #fff; border: none;
+  border-radius: 5px; font-size: 0.78rem; font-weight: 600; cursor: pointer; margin-left: 4px;
+}
+.go-btn:hover { background: #2ea043; }
+.go-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.pr-badge { font-size: 0.85rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px; }
 .loading-tag { font-size: 0.75rem; color: var(--yellow); animation: pulse 1.5s infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 .header-right { display: flex; align-items: center; gap: 14px; font-size: 0.85rem; }
