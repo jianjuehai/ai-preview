@@ -4,10 +4,9 @@
 
 基于大模型与 Agent 架构的代码评审辅助工具，自动化分析 GitHub PR 变更，提供 **变更摘要**、**风险代码识别** 与 **智能修复建议**，配合可视化 Dashboard 直观呈现审查结果。
 
-## 演示视频
-<video width="320" height="240" controls>
-    <source src="[movie.mp4](https://github.com/user-attachments/assets/fa44d3b4-76db-4008-8109-2ec49144aece)" type="video/mp4">
-</video>
+## 📖 演示视频
+
+[▶ 点击观看演示视频](https://github.com/user-attachments/assets/fa44d3b4-76db-4008-8109-2ec49144aece)
 
 ## 🛠 技术栈
 
