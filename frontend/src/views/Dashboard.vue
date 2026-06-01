@@ -7,6 +7,7 @@
         <span v-if="prInfo" class="pr-badge">
           {{ prInfo.base_ref }}#{{ prInfo.number }} — {{ prInfo.title }}
         </span>
+        <span v-if="loading" class="loading-tag">Loading...</span>
       </div>
       <div class="header-right">
         <span class="stat">Files: {{ stats.files_changed }}</span>
@@ -23,7 +24,27 @@
       <!-- Left Panel: File List -->
       <aside class="left-panel">
         <div class="panel-title">Changed Files</div>
+
+        <!-- Error state -->
+        <div v-if="error" class="error-box">
+          <p class="error-msg">{{ error }}</p>
+          <p class="error-hint">
+            Make sure the backend is running:<br/>
+            <code>python -m uvicorn src.api.server:app --port 8000</code>
+          </p>
+          <button class="retry-btn" @click="fetchAll('jianjuehai', 'ai-preview', 1)">
+            Retry
+          </button>
+        </div>
+
+        <!-- Loading state -->
+        <div v-else-if="loading" class="loading-state">
+          Fetching PR data...
+        </div>
+
+        <!-- File list -->
         <FileList
+          v-else
           :files="files"
           :review-data="reviewData"
           :active-file="activeFile"
@@ -42,11 +63,6 @@
           />
         </router-view>
       </main>
-    </div>
-
-    <!-- Loading overlay -->
-    <div v-if="loading" class="loading-overlay">
-      <div class="loading-spinner">Loading...</div>
     </div>
   </div>
 </template>
@@ -81,11 +97,10 @@ export default {
     }
 
     onMounted(() => {
-      // Auto-load with default values – in production, get from URL params
       fetchAll('jianjuehai', 'ai-preview', 1)
     })
 
-    return { diffData, reviewData, files, stats, prInfo, loading, error, activeFile, riskLevel, onSelectFile }
+    return { diffData, reviewData, files, stats, prInfo, loading, error, activeFile, riskLevel, onSelectFile, fetchAll }
   }
 }
 </script>
@@ -121,6 +136,8 @@ body { background: var(--bg-primary); color: var(--text-primary); }
 .header-left { display: flex; align-items: center; gap: 16px; }
 .header-left h1 { font-size: 1.1rem; color: var(--accent); font-weight: 600; }
 .pr-badge { font-size: 0.85rem; color: var(--text-secondary); }
+.loading-tag { font-size: 0.75rem; color: var(--yellow); animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 .header-right { display: flex; align-items: center; gap: 14px; font-size: 0.85rem; }
 .stat { color: var(--text-secondary); }
 .stat.add { color: var(--green); }
@@ -154,10 +171,25 @@ body { background: var(--bg-primary); color: var(--text-primary); }
   flex: 1; overflow-y: auto; background: var(--bg-primary);
 }
 
-/* Loading */
-.loading-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
-  display: flex; align-items: center; justify-content: center; z-index: 100;
+/* Error */
+.error-box {
+  padding: 24px 16px; text-align: center;
 }
-.loading-spinner { color: var(--accent); font-size: 1.2rem; }
+.error-msg { color: var(--red); font-size: 0.9rem; margin-bottom: 12px; }
+.error-hint { color: var(--text-secondary); font-size: 0.78rem; margin-bottom: 16px; line-height: 1.6; }
+.error-hint code {
+  background: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px;
+  font-size: 0.75rem; color: var(--accent);
+}
+.retry-btn {
+  padding: 6px 20px; background: #1f6feb; color: #fff; border: none;
+  border-radius: 6px; font-size: 0.85rem; cursor: pointer;
+}
+.retry-btn:hover { background: #388bfd; }
+
+/* Loading state (in panel, not full-screen overlay) */
+.loading-state {
+  padding: 32px 16px; text-align: center; color: var(--text-secondary);
+  font-size: 0.85rem;
+}
 </style>
